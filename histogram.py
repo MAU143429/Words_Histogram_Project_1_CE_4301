@@ -14,28 +14,40 @@ Toma el archivo dado por el usuario lo lee y crea uno nuevo y almacena palabra
 por palabra el texto procesado.
 
 """
+import re
+import struct
+
 def preProcessing(file_path):
     try:
+        # Leer el archivo de entrada
         with open(file_path, 'r', encoding='utf-8') as file:
             text = file.read()
         
+        # Convertir el texto a minúsculas y eliminar caracteres no alfanuméricos
         text = text.lower()
         text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
 
+        # Dividir el texto en palabras
         words = text.split()
-        output_file_path = file_path.replace('.txt', '_procesado.txt')
+
+        # Crear el archivo binario de salida
+        output_file_path = file_path.replace('.txt', '_procesado.bin')
         
-        with open(output_file_path, 'w', encoding='utf-8') as output_file:
-            for word in words:
-                output_file.write(word + '\n')
+        with open(output_file_path, 'wb') as output_file:
+            # Crear una cadena con las palabras separadas por comas
+            csv_words = ','.join(words)
+            
+            # Convertir la cadena a bytes y escribir en el archivo binario
+            output_file.write(csv_words.encode('utf-8'))
         
         print(f"Preprocesamiento completado. Archivo guardado como: {output_file_path}")
-       
     
     except FileNotFoundError:
         print("Archivo no encontrado. Por favor, verifica la ruta e intenta nuevamente.")
     except Exception as e:
         print(f"Ha ocurrido un error: {e}")
+
+
 
 
 """
