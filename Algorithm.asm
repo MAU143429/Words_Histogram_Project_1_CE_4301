@@ -63,6 +63,7 @@ get_word:
     jmp read_word
 
 read_word:
+    mov byte [end_of_buffer_flag], 0  ; Refrescar la bandera de fin de buffer
     mov al, [esi]              ; Leer un byte del buffer
     cmp al, ','                ; Comprobar si es una coma
     je end_read_word           ; Si es una coma, terminar el bucle
@@ -108,11 +109,11 @@ read_loop:
 
 end_of_buffer:
     mov byte [end_of_buffer_flag], 1  ; Indicar que se ha llegado al final del buffer
-    jmp end_read_loop
+    jmp clear_word_buffer
 
 
 end_read_loop:
-    mov byte [edx], 0          ; Terminar la palabra con un byte nulo ;CUIDADO CON ESTO!!
+    mov byte [edx], 0          ; Terminar la palabra con un byte nulo ;
     inc ebp                    ; Mover el puntero al siguiente byte para omitir la coma
 
     jmp compare_loop
@@ -161,23 +162,45 @@ verify_word:
     jmp clear_compare_buffer
 
 
+clear_word_buffer:
+
+    xor ebx, ebx               ; Inicializar el contador de palabras
+    mov edi, word_buffer       ; EDX apunta al inicio del buffer
+    mov ecx, 32                ; Número de bytes a limpiar (32 bytes)
+    xor eax, eax               ; Valor a escribir (0)
+
+    jmp word_clear_loop
+
+
+word_clear_loop:
+    mov [edi], al              ; Escribir 0 en el buffer PUEDE QUE SEA CON EDX LA LIMPIEZA
+    inc edi                    ; Mover al siguiente byte del buffer
+    loop word_clear_loop            ; Repetir hasta que ECX sea 0
+
+    mov edi, word_buffer       ; EDX apunta al inicio del buffer
+    
+    jmp clear_compare_buffer
+
 clear_compare_buffer:
 
     mov edx, compare_buffer    ; EDX apunta al inicio del buffer
     mov ecx, 32                ; Número de bytes a limpiar (32 bytes)
     xor eax, eax               ; Valor a escribir (0)
 
-    jmp clear_loop
+    jmp compare_clear_loop
 
-clear_loop:
+compare_clear_loop:
     mov [edx], al              ; Escribir 0 en el buffer
     inc edx                    ; Mover al siguiente byte del buffer
-    loop clear_loop            ; Repetir hasta que ECX sea 0
+    loop compare_clear_loop            ; Repetir hasta que ECX sea 0
 
     mov edx, compare_buffer    ; EDX apunta al inicio del buffer
+    
+    cmp byte [end_of_buffer_flag], 1
+    je read_word
+
 
     jmp read_loop
-
 
 end_compare_loop:
 
