@@ -11,7 +11,7 @@ section .bss
     end_of_buffer_flag resb 1              ; Flag que indica si ya se terminó de leer el archivo
     word_buffer resb 32                  ; Buffer para almacenar la palabra leída (máximo 16 caracteres)
     compare_buffer resb 32               ; Buffer para almacenar la palabra leída (máximo 16 caracteres)
-    word_count resd 1                    ; Contador de palabras
+
 
 section .text
 global _start
@@ -87,6 +87,7 @@ search_word_in_block:
     mov ebp, buffer            ; EBP ahora contiene la dirección del buffer grande
     mov edi, word_buffer       ; EDI apunta al buffer de la palabra a comparar
     mov edx, compare_buffer    ; EBX apunta al buffer donde se almacenará la palabra
+    mov ebx, 0                 ; Inicializar el contador de palabras
         
     jmp read_loop
 
@@ -129,8 +130,8 @@ compare_loop:
 compare_loop_inner:
 
     mov al, [edx]              ; Leer un byte de la palabra leída usando el contador
-    mov bl, [edi]              ; Leer un byte de la palabra a comparar usando el contador
-    cmp al, bl                 ; Comparar los bytes
+    mov ah, [edi]              ; Leer un byte de la palabra a comparar usando el contador
+    cmp al, ah                 ; Comparar los bytes
     jne words_not_equal        ; Si no son iguales, salir
 
     cmp al, 0                  ; Comprobar si es el final de la palabra
@@ -155,7 +156,7 @@ verify_word:
     cmp eax, 1
     jne clear_compare_buffer
 
-    inc dword [word_count]
+    inc ebx
 
     jmp clear_compare_buffer
 
@@ -172,6 +173,8 @@ clear_loop:
     mov [edx], al              ; Escribir 0 en el buffer
     inc edx                    ; Mover al siguiente byte del buffer
     loop clear_loop            ; Repetir hasta que ECX sea 0
+
+    mov edx, compare_buffer    ; EDX apunta al inicio del buffer
 
     jmp read_loop
 
