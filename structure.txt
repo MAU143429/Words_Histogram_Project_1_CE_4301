@@ -1,0 +1,70 @@
+/**
+process_block:
+    
+    call get_word
+
+    call verify_word
+
+    ; Si verify word dice que la palabra no se ha analizado entonces
+    cmp 
+    je process_word
+
+
+    ; Se termina de procesar las palabras del bloque?
+    cmp 
+    jne process_block
+    
+    ret 
+
+process_word:
+
+    call search_word_in_block
+
+    call add_word_to_dictionary
+
+    call add_word_to_array
+
+    ret
+
+get_word:
+    
+    ; Obtener la palabra del texto
+
+    ret
+
+search_word_in_block: 
+
+    ; Buscar y contar la cantidad de apariciones de la palabra en el texto
+
+    ret
+
+
+add_word_to_array:
+
+    ; permite agregar la palabra al array junto con la frecuencia
+
+    ; si la palabra ya existe en el array entonces incrementa la frecuencia
+
+    ret
+
+add_word_to_dictionary:
+    
+    ; permite agregar la palabra al diccionario
+
+    ret
+
+
+
+save_txt:
+
+    ; Deberia crear txt guardar 10 palabras mas repetidas y salir del programa
+
+    jmp exit 
+
+    
+
+clear_dictionary:
+    ; Simplemente reiniciamos el tamaño del diccionario a 0
+    mov dword [dict_size], 0
+    ret
+*/

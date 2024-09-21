@@ -5,7 +5,9 @@ build:
 run: build
 	qemu-system-i386 -nographic -no-reboot -hda Algorithm
 
-debug: build
+debug:
+	nasm -f elf32 -g -F dwarf Algorithm.asm -o Algorithm.o
+	ld -m elf_i386 Algorithm.o -o Algorithm
 	gdb Algorithm
 
 clean:
@@ -13,6 +15,5 @@ clean:
 
 rev: build
 	objdump -d Algorithm
-
 
 
