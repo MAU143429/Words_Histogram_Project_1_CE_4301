@@ -2,7 +2,7 @@
 import re
 
 file_path = 'text.txt'
-palabra = 'trata'
+palabra = 'la'
 
 with open(file_path, 'r', encoding='utf-8') as file:
     text = file.read()

@@ -6,7 +6,7 @@
 ###########################################################################################
 import re
 import matplotlib.pyplot as plt
-from collections import Counter
+
 
 
 """
@@ -25,7 +25,10 @@ def preProcessing(file_path):
         
         # Convertir el texto a minúsculas y eliminar caracteres no alfanuméricos
         text = text.lower()
-        text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+        text = re.sub(r'[^a-zA-Z0-9\sñáéíóú]', '', text)
+
+        # Reemplazar tildes y ñ
+        text = text.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
 
         # Dividir el texto en palabras
         words = text.split()

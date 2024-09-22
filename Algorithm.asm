@@ -1,5 +1,7 @@
 section .data
-    filepath db 'text_procesado.bin', 0  ; Ruta al archivo binario
+    temp_buffer resb 2         ; Buffer temporal para almacenar los 2 bytes de bx
+    filepath db 'sample_procesado.bin', 0  ; Ruta al archivo binario
+    save_filepath db 'procesado.bin', 0  ; Ruta al archivo binario
     max_file_size equ 71680              ; Tamaño máximo del archivo (70kB)]
     dictionary times 71680 db '&'        ; Inicializar todo el buffer con '&'
 
@@ -71,7 +73,7 @@ read_word:
     je end_read_word           ; Si es una coma, terminar el bucle
 
     cmp al, 0                  ; Comprobar si es el byte nulo (fin del texto principal)
-    je exit                    ; Si es nulo, saltar a la salida
+    je find_highest_frequency  ; Si es nulo, saltar a la salida
 
     mov [edi], al              ; Almacenar el byte en el buffer de la palabra
     inc edi                    ; Mover el puntero al siguiente byte
@@ -286,6 +288,122 @@ restore_registers:
     pop edi                    ; Restaurar edi
     pop bx                     ; Restaurar bx
     jmp clear_word_buffer      ; Saltar a limpiar el buffer de la palabra
+
+
+
+
+
+
+
+
+
+find_highest_frequency:
+    mov esi, dictionary        ; ESI apunta al inicio del dictionary
+    xor bx, bx                 ; Inicializar la frecuencia máxima a 0
+    xor ax, ax                 ; Limpiar AX para comparar frecuencias
+
+    jmp search_next_frequency
+
+search_next_frequency:
+
+    cmp byte [esi], 0x26        ; Comprobar si es el carácter '&' (fin del dictionary)
+    je find_word_with_highest_frequency                    ; Si es '&', terminar la búsqueda
+
+    ; Buscar el separador '/' para pasar a la frecuencia
+    jmp skip_to_frequency
+
+skip_to_frequency:
+    cmp byte [esi], '/'        ; Buscar el separador '/'
+    je extract_frequency       ; Si es '/', saltar a extraer la frecuencia
+    inc esi                    ; Avanzar al siguiente byte en el diccionario
+    jmp skip_to_frequency      ; Repetir hasta encontrar el separador
+
+extract_frequency:
+    mov ax, [esi + 1]          ; Cargar los 2 bytes de la frecuencia en AX
+    cmp ax, bx                 ; Comparar la frecuencia con la mayor frecuencia guardada en BX
+    jle skip_to_next_entry     ; Si la frecuencia actual es menor o igual, saltar
+
+    ; Si encontramos una frecuencia mayor, actualizamos BX
+    mov bx, ax                 ; Actualizar la frecuencia más alta en BX
+    jmp skip_to_next_entry     ; Saltar al siguiente bloque de palabras
+
+skip_to_next_entry:
+    ; Saltar al siguiente bloque de palabras (después de la coma)
+    add esi, 4                 ; Avanzar para saltar la frecuencia (2 bytes) y la coma (1 byte)
+    jmp search_next_frequency  ; Repetir el proceso
+
+
+
+
+
+
+
+
+
+
+
+find_word_with_highest_frequency:
+    mov esi, dictionary        ; Reiniciar ESI al inicio del dictionary
+    xor edi, edi               ; Reiniciar EDI para la palabra más repetida
+
+    jmp search_word_with_frequency
+
+search_word_with_frequency:
+    cmp byte [esi], 0x26         ; Comprobar si es el carácter '&' (fin del dictionary)
+    je exit                    ; Si es '&', salir
+
+    ; Buscar el separador '/' para pasar a la frecuencia
+    jmp skip_to_frequency_again
+
+skip_to_frequency_again:
+    cmp byte [esi], '/'        ; Buscar el separador '/'
+    je check_frequency_again   ; Si es '/', saltar a verificar la frecuencia
+    inc esi                    ; Avanzar al siguiente byte en el diccionario
+    jmp skip_to_frequency_again ; Repetir hasta encontrar el separador
+
+check_frequency_again:
+    mov ax, [esi + 1]          ; Cargar los 2 bytes de la frecuencia
+    cmp ax, bx                 ; Comparar con la frecuencia almacenada en BX
+    jne skip_to_next_entry_again ; Si no coincide, saltar al siguiente bloque
+
+    ; Si la frecuencia coincide con BX, retroceder hasta la coma anterior
+    mov ecx, esi               ; Guardar la posición actual
+    jmp find_comma
+
+find_comma:
+    dec ecx                    ; Retroceder byte a byte
+    cmp byte [ecx], ','        ; Comprobar si encontramos la coma ','
+    jne find_comma             ; Si no es la coma, seguir retrocediendo
+
+    lea edi, [ecx + 1]         ; EDI apunta al inicio de la palabra (después de la coma)
+    mov edx, word_buffer       ; EDX apunta al buffer word_buffer para almacenar la palabra
+
+    jmp copy_word_to_buffer
+
+copy_word_to_buffer:
+    mov al, [edi]              ; Leer un byte de la palabra
+    cmp al, '/'                ; Comprobar si es el separador '/' (fin de la palabra)
+    je end_copy_word           ; Si es '/', terminar la copia
+    mov [edx], al              ; Almacenar el byte en el buffer de la palabra
+    inc edi                    ; Avanzar al siguiente byte de la palabra
+    inc edx                    ; Avanzar al siguiente byte en el buffer de la palabra
+    jmp copy_word_to_buffer    ; Repetir hasta copiar la palabra completa
+
+end_copy_word:
+    mov byte [edx], 0          ; Terminar la palabra con un byte nulo
+    jmp exit                   ; Terminar
+
+skip_to_next_entry_again:
+    ; Saltar al siguiente bloque de palabras (después de la coma)
+    add esi, 4                 ; Avanzar para saltar la frecuencia (2 bytes) y la coma (1 byte)
+    jmp search_word_with_frequency ; Repetir el proceso
+
+
+
+
+
+
+
 
 error_opening_file:
     ; Manejo del error al abrir el archivo
