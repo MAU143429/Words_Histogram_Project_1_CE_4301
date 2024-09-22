@@ -1,10 +1,12 @@
 section .data
     filepath db 'text_procesado.bin', 0  ; Ruta al archivo binario
     max_file_size equ 71680              ; Tamaño máximo del archivo (70kB)]
+    dictionary times 71680 db '&'        ; Inicializar todo el buffer con '&'
 
 
 section .bss
     buffer resb max_file_size            ; Buffer para cargar todo el archivo (70kB)
+    ;dictionary resb max_file_size        ; Buffer para cargar todo el archivo (70kB)
     file_descriptor resd 1               ; Espacio para el descriptor del archivo
     bytes_read resd 1                    ; Almacenar la cantidad de bytes leídos
     end_of_file_flag resb 1              ; Flag que indica si ya se terminó de leer el archivo
@@ -88,7 +90,7 @@ search_word_in_block:
     mov ebp, buffer            ; EBP ahora contiene la dirección del buffer grande
     mov edi, word_buffer       ; EDI apunta al buffer de la palabra a comparar
     mov edx, compare_buffer    ; EBX apunta al buffer donde se almacenará la palabra
-    mov ebx, 0                 ; Inicializar el contador de palabras
+    mov bx, 0                  ; Inicializar el contador de palabras
         
     jmp read_loop
 
@@ -109,7 +111,8 @@ read_loop:
 
 end_of_buffer:
     mov byte [end_of_buffer_flag], 1  ; Indicar que se ha llegado al final del buffer
-    jmp clear_word_buffer
+        
+    jmp insert_word_in_dictionary
 
 
 end_read_loop:
@@ -157,14 +160,14 @@ verify_word:
     cmp eax, 1
     jne clear_compare_buffer
 
-    inc ebx
+    inc bx
 
     jmp clear_compare_buffer
 
 
 clear_word_buffer:
 
-    xor ebx, ebx               ; Inicializar el contador de palabras
+    xor bx, bx               ; Inicializar el contador de palabras
     mov edi, word_buffer       ; EDX apunta al inicio del buffer
     mov ecx, 32                ; Número de bytes a limpiar (32 bytes)
     xor eax, eax               ; Valor a escribir (0)
@@ -199,12 +202,54 @@ compare_clear_loop:
     cmp byte [end_of_buffer_flag], 1
     je read_word
 
-
     jmp read_loop
 
 end_compare_loop:
 
     jmp exit
+
+
+insert_word_in_dictionary:
+    push bx                    ; Guardamos bx (frecuencia) en la pila
+    push edi                   ; Guardamos edi (dirección de word_buffer) en la pila
+    mov ecx, dictionary        ; Cargar la dirección base de dictionary
+
+find_free_space:
+    cmp byte [ecx], 0x26        ; Comprobar si es un byte nulo (espacio libre)
+    je copy_word             ; Si encuentra espacio libre, saltar a la inserción
+    inc ecx                    ; Mover al siguiente byte en dictionary
+    jmp find_free_space        ; Repetir hasta encontrar espacio libre
+
+copy_word:
+    mov al, [edi]              ; Leer un byte de la palabra desde word_buffer
+    cmp al, 0                  ; Comprobar si es el byte nulo de final de palabra
+    je insert_separator        ; Si es nulo, saltar a insertar '/'
+    mov [ecx], al              ; Escribir el byte en dictionary
+
+    inc edi                    ; Mover al siguiente byte de la palabra
+    inc ecx                    ; Mover al siguiente byte en dictionary
+    jmp copy_word              ; Repetir el proceso para copiar la palabra
+
+insert_separator:
+    mov byte [ecx], '/'        ; Insertar el separador '/'
+    inc ecx                    ; Mover al siguiente byte en dictionary
+    jmp insert_frequency       ; Saltar a insertar la frecuencia
+
+insert_frequency:
+    ; Insertar la frecuencia en 16 bits (bx)
+    mov [ecx], bx              ; Almacenar el valor de bx (frecuencia) en dictionary
+    add ecx, 2                 ; Avanzar 2 bytes, porque ebx es de 32 bits
+    jmp insert_comma           ; Saltar a insertar la coma
+
+    mov byte [ecx], ','        ; Insertar la coma separadora
+    inc ecx                    ; Mover al siguiente byte en dictionary
+    jmp restore_registers      ; Saltar a restaurar los registros
+
+restore_registers:
+    pop edi                    ; Restaurar edi
+    pop bx                     ; Restaurar bx
+    jmp clear_word_buffer      ; Saltar a limpiar el buffer de la palabra
+
 
 error_opening_file:
     ; Manejo del error al abrir el archivo
