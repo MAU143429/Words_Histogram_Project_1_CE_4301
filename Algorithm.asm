@@ -6,7 +6,6 @@ section .data
 
 section .bss
     buffer resb max_file_size            ; Buffer para cargar todo el archivo (70kB)
-    ;dictionary resb max_file_size        ; Buffer para cargar todo el archivo (70kB)
     file_descriptor resd 1               ; Espacio para el descriptor del archivo
     bytes_read resd 1                    ; Almacenar la cantidad de bytes leídos
     end_of_file_flag resb 1              ; Flag que indica si ya se terminó de leer el archivo
@@ -66,9 +65,13 @@ get_word:
 
 read_word:
     mov byte [end_of_buffer_flag], 0  ; Refrescar la bandera de fin de buffer
+
     mov al, [esi]              ; Leer un byte del buffer
     cmp al, ','                ; Comprobar si es una coma
     je end_read_word           ; Si es una coma, terminar el bucle
+
+    cmp al, 0                  ; Comprobar si es el byte nulo (fin del texto principal)
+    je exit                    ; Si es nulo, saltar a la salida
 
     mov [edi], al              ; Almacenar el byte en el buffer de la palabra
     inc edi                    ; Mover el puntero al siguiente byte
@@ -82,7 +85,49 @@ end_read_word:
     add ecx, 1                 ; Avanzar un byte para omitir la coma
     mov esi, ecx               ; Actualizar el puntero del buffer
 
-    jmp search_word_in_block
+    mov edi, word_buffer       ; EDI apunta al buffer de la palabra a comparar
+    mov edx, dictionary        ; EDX ahora contiene la dirección de inicio del dictionary
+
+    jmp compare_new_loop       ; Redirigir a la nueva función
+
+compare_new_loop:
+    ; Verificar si llegamos al final del dictionary (buscando '&')
+    cmp byte [edx], 0x26       ; Comprobar si es el carácter '&'
+    je search_word_in_block     ; Si es '&', saltar a buscar la palabra en el bloque
+
+    ; Comparar byte a byte palabra de word_buffer y dictionary
+    mov al, [edi]              ; Cargar el byte actual de word_buffer
+    mov ah, [edx]              ; Cargar el byte actual de dictionary
+    cmp al, ah                 ; Comparar los bytes
+    jne find_next_new_word     ; Si no son iguales, buscar la siguiente palabra
+
+    ; Verificar si es el final de la palabra en word_buffer
+    cmp al, 0                  ; Comprobar si es el byte nulo en word_buffer
+    je check_new_dictionary_delimiter  ; Si es el final, verificar si en dictionary hay '/'
+
+    ; Avanzar ambos punteros
+    inc edi                    ; Avanzar al siguiente byte en word_buffer
+    inc edx                    ; Avanzar al siguiente byte en dictionary
+    jmp compare_new_loop       ; Volver a comparar el siguiente byte
+
+
+
+check_new_dictionary_delimiter:
+    cmp byte [edx], '/'        ; Verificar si hay un '/' en el dictionary (final de palabra)
+    je clear_word_buffer       ; Si lo hay, la palabra está en el dictionary, saltar a new_word_found
+    jmp find_next_new_word      ; Si no lo hay, buscar la siguiente palabra
+
+
+find_next_new_word:
+    cmp byte [edx], ','    ; Buscar la coma que separa las palabras
+    je move_to_next_new_word   ; Si encontramos la coma, mover al inicio de la siguiente palabra
+    inc edx                ; Avanzar al siguiente byte
+    jmp find_next_new_word ; Repetir hasta encontrar la coma
+
+
+move_to_next_new_word:
+    inc edx                    ; Avanzar al siguiente byte después de la coma
+    jmp compare_new_loop       ; Volver a comparar la palabra
 
 
 search_word_in_block:
@@ -118,13 +163,9 @@ end_of_buffer:
 end_read_loop:
     mov byte [edx], 0          ; Terminar la palabra con un byte nulo ;
     inc ebp                    ; Mover el puntero al siguiente byte para omitir la coma
-
     jmp compare_loop
 
 compare_loop:
-
-    cmp byte [end_of_buffer_flag], 1
-    je end_compare_loop
 
     mov edx, compare_buffer    ; EDX apunta al buffer de la palabra leída
     mov edi, word_buffer       ; EDI apunta al buffer de la palabra a comparar
@@ -204,11 +245,6 @@ compare_clear_loop:
 
     jmp read_loop
 
-end_compare_loop:
-
-    jmp exit
-
-
 insert_word_in_dictionary:
     push bx                    ; Guardamos bx (frecuencia) en la pila
     push edi                   ; Guardamos edi (dirección de word_buffer) en la pila
@@ -241,6 +277,7 @@ insert_frequency:
     add ecx, 2                 ; Avanzar 2 bytes, porque ebx es de 32 bits
     jmp insert_comma           ; Saltar a insertar la coma
 
+insert_comma:
     mov byte [ecx], ','        ; Insertar la coma separadora
     inc ecx                    ; Mover al siguiente byte en dictionary
     jmp restore_registers      ; Saltar a restaurar los registros
@@ -249,7 +286,6 @@ restore_registers:
     pop edi                    ; Restaurar edi
     pop bx                     ; Restaurar bx
     jmp clear_word_buffer      ; Saltar a limpiar el buffer de la palabra
-
 
 error_opening_file:
     ; Manejo del error al abrir el archivo

@@ -2,6 +2,7 @@
 import re
 
 file_path = 'text.txt'
+palabra = 'trata'
 
 with open(file_path, 'r', encoding='utf-8') as file:
     text = file.read()
@@ -12,6 +13,7 @@ with open(file_path, 'r', encoding='utf-8') as file:
 
 # Splitting the text into words and counting the occurrences of "que" only (no substrings)
 words = text.split()
-count_que = words.count('trata')
+count_que = words.count(palabra)
 
-print(count_que)
+print("lA PALABRA '{}' SE REPITE {} VECES".format(palabra, count_que))
+
