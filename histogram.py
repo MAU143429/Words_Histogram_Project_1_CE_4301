@@ -6,16 +6,13 @@
 ###########################################################################################
 import re
 import matplotlib.pyplot as plt
-
-
+import struct
 
 """
 Toma el archivo dado por el usuario lo lee y crea uno nuevo y almacena palabra
 por palabra el texto procesado.
 
 """
-import re
-import struct
 
 def preProcessing(file_path):
     try:
@@ -34,14 +31,14 @@ def preProcessing(file_path):
         words = text.split()
 
         # Crear el archivo binario de salida
-        output_file_path = file_path.replace('.txt', '_procesado.bin')
+        output_file_path = file_path.replace('.txt', '_procesado.txt')
         
         with open(output_file_path, 'wb') as output_file:
-            # Crear una cadena con las palabras separadas por comas
-            csv_words = ','.join(words)
+            # Crear una cadena con las palabras separadas por saltos de línea
+            newline_words = '\n'.join(words)
             
             # Convertir la cadena a bytes y escribir en el archivo binario
-            output_file.write(csv_words.encode('utf-8'))
+            output_file.write(newline_words.encode('utf-8'))
         
         print(f"Preprocesamiento completado. Archivo guardado como: {output_file_path}")
     
@@ -52,44 +49,50 @@ def preProcessing(file_path):
 
 
 
-
 """
 Lee un archivo de texto que contiene palabras y sus frecuencias, luego genera un histograma.
 """
-def createHistogram(file_path):
+def createHistogram(input_file):
+    word_freq = {}
+
+    with open(input_file, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        parts = line.split()
+
+        if len(parts) == 2:  
+            word = parts[0]
+            freq_ascii = parts[1]
+
+            try:
+                frequency = ord(freq_ascii)
+            except ValueError:
+                frequency = 0  
+
+            word_freq[word] = frequency
+
+    words = list(word_freq.keys())
+    frequencies = list(word_freq.values())
+
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(words, frequencies, color='aqua')
+    plt.xticks(rotation=45, ha='right') 
+    plt.tight_layout()
+    plt.xlabel('Palabras')
+    plt.ylabel('Frecuencias')
+    plt.title('Histograma de Frecuencias de Palabras')
+        
     
-    try:
-        words = []
-        frequencies = []
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line in file:
-                word, frequency = line.split()
-                words.append(word)
-                frequencies.append(int(frequency))
-        
-          
-        plt.figure(figsize=(10, 6))  
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}', 
+                 ha='center', va='bottom')
 
-        bars = plt.bar(words, frequencies, color='#CB34FF')
-        for bar in bars:
-            yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 2, int(yval), ha='center', va='bottom')
-
-        plt.xlabel('Palabras')
-        plt.ylabel('Frecuencias')
-        plt.title('Histograma de Frecuencias de Palabras')
-        plt.xticks(rotation=45, ha='right')  
-        plt.tight_layout()  
-
-        plt.show()
-
-    except FileNotFoundError:
-        print("Archivo no encontrado. Por favor, verifica la ruta e intenta nuevamente.")
-    except Exception as e:
-        print(f"Ha ocurrido un error: {e}")
+    plt.show()
 
 def main():
+    
     print("Bienvenido al Pre y Post Procesamiento de Histogramas")
     print("Por favor, elige una opción de las mostradas a continuación:")
     print("1. Preprocesamiento de texto")
