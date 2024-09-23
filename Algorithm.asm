@@ -4,6 +4,7 @@ section .data
     save_filepath db 'procesado.bin', 0  ; Ruta al archivo binario
     max_file_size equ 71680              ; Tamaño máximo del archivo (70kB)]
     dictionary times 71680 db '&'        ; Inicializar todo el buffer con '&'
+    histogram times 256 db '&'        ; Inicializar todo el buffer con '&'
 
 
 section .bss
@@ -391,7 +392,7 @@ copy_word_to_buffer:
 
 end_copy_word:
     mov byte [edx], 0          ; Terminar la palabra con un byte nulo
-    jmp exit                   ; Terminar
+    jmp store_in_histogram                   ; Terminar
 
 skip_to_next_entry_again:
     ; Saltar al siguiente bloque de palabras (después de la coma)
@@ -400,7 +401,53 @@ skip_to_next_entry_again:
 
 
 
+store_in_histogram:
+    mov esi, word_buffer       ; ESI apunta a la palabra en word_buffer
+    mov edi, histogram         ; EDI apunta al inicio del buffer histogram
 
+    ; Buscar una posición libre en el buffer
+    jmp find_free_space_in_histogram
+
+find_free_space_in_histogram:
+
+
+    cmp byte [edi], 0x26       ; Comprobar si llegamos al final del buffer
+    je copy_word_to_histogram  ; Si llegamos al final, saltar a copiar la palabra
+
+    inc edi                    ; Avanzar al siguiente byte
+    
+    jmp find_free_space        ; Repetir hasta encontrar espacio libre
+
+copy_word_to_histogram:
+    mov edx, esi               ; EDX apuntará a la palabra en word_buffer (temporal)
+    jmp copy_word_loop         ; Saltar a copiar la palabra en el histogram
+
+copy_word_loop:
+    mov al, [edx]              ; Leer un byte de la palabra
+    cmp al, 0                  ; Comprobar si es el byte nulo (fin de la palabra)
+    je add_separator           ; Si es 0, saltar para agregar el separador '/'
+    mov [edi], al              ; Copiar el byte al histogram
+    inc edx                    ; Avanzar al siguiente byte en word_buffer
+    inc edi                    ; Avanzar al siguiente byte en histogram
+    jmp copy_word_loop              ; Repetir hasta que se copie toda la palabra
+
+add_separator:
+    mov byte [edi], '/'        ; Agregar el separador '/'
+    inc edi                    ; Avanzar al siguiente byte en histogram
+
+    jmp store_frequency        ; Saltar a almacenar la frecuencia
+
+store_frequency:
+    mov [edi], bx              ; Almacenar los dos bytes de la frecuencia en histogram
+    add edi, 2                 ; Avanzar 2 bytes después de la frecuencia
+
+    jmp add_comma              ; Saltar a agregar la coma
+
+add_comma:
+    mov byte [edi], ','        ; Agregar la coma
+    inc edi                    ; Avanzar al siguiente byte en histogram
+
+    jmp exit
 
 
 
