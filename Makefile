@@ -3,5 +3,10 @@ build:
 
 run:
 	./Algorithm
+	
+host:
+	qemu-arm -singlestep -g 1236 Algorithm
 
-
+debug:
+	gdb-multiarch Algorithm
+	target remote localhost:1236
